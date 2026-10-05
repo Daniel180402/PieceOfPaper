@@ -18,5 +18,9 @@ let package = Package(
             name: "PaperKitTests",
             dependencies: ["PaperKit"]
         ),
+        .testTarget(
+            name: "PieceOfPaperTests",
+            dependencies: ["PieceOfPaper"]
+        ),
     ]
 )

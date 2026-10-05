@@ -6,25 +6,29 @@ struct PageEditorView: View {
     let page: Page
     let folder: Folder
     @Environment(LibraryStore.self) private var store
+    @AppStorage(SettingsKeys.editorFontSize) private var fontSize = SettingsKeys.defaultFontSize
     @FocusState private var titleFocused: Bool
+    @State private var editorFocusRequest = 0
     @State private var confirmingDeletion = false
 
     /// Keep the header aligned with the editor text column.
-    static let readableWidth: CGFloat = 720
-    static let horizontalPadding: CGFloat = 32
+    static let readableWidth = PaperTextView.readableWidth
+    static let horizontalPadding = PaperTextView.minimumInset
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            TextEditor(text: Binding(
-                get: { page.body },
-                set: { store.updateBody($0, of: page.id) }
-            ))
-            .font(.body)
-            .scrollContentBackground(.hidden)
-            .padding(.horizontal, Self.horizontalPadding)
-            .padding(.vertical, 16)
+            MarkdownEditor(
+                text: Binding(
+                    get: { page.body },
+                    set: { store.updateBody($0, of: page.id) }
+                ),
+                fontSize: fontSize,
+                jump: store.jumpRequest?.pageID == page.id ? store.jumpRequest : nil,
+                focusRequest: editorFocusRequest,
+                onJumpHandled: { store.jumpRequest = nil }
+            )
         }
         .background(Color(nsColor: .textBackgroundColor))
         .navigationTitle(page.displayTitle)
@@ -75,6 +79,7 @@ struct PageEditorView: View {
             .textFieldStyle(.plain)
             .font(.system(size: 28, weight: .bold))
             .focused($titleFocused)
+            .onSubmit { editorFocusRequest += 1 }
 
             Text(metadata)
                 .font(.caption)
