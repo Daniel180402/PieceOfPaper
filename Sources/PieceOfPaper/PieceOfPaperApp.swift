@@ -16,6 +16,11 @@ struct PieceOfPaperApp: App {
         .commands {
             PaperCommands(store: store)
         }
+
+        Settings {
+            SettingsView()
+                .environment(store)
+        }
     }
 }
 
