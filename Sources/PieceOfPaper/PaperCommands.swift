@@ -6,6 +6,8 @@ struct PaperCommands: Commands {
 
     var body: some Commands {
         SidebarCommands()
+        // Find (⌘F), spelling and substitutions for the editor.
+        TextEditingCommands()
 
         CommandGroup(replacing: .newItem) {
             Button("Nuova pagina") { store.createPage() }

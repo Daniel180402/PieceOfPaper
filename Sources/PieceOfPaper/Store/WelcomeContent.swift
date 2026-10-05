@@ -58,7 +58,8 @@ enum WelcomeContent {
 
     - ⌘N nuova pagina
     - ⇧⌘N nuova cartella
-    - ⇧⌘R mostra nel Finder
+    - ⇧⌘R mostra nel Finder · ⌥⌘R ricarica dal disco
+    - ⌘F cerca nella pagina
 
     # Formato
 
@@ -71,5 +72,9 @@ enum WelcomeContent {
     # Elenchi
 
     Premi Invio alla fine di un elenco per continuarlo, Invio su una voce vuota per terminarlo. Tab e ⇧Tab cambiano il livello della voce.
+
+    # Link
+
+    Gli indirizzi web e i link `[testo](https://…)` si aprono con ⌘-clic.
     """
 }
