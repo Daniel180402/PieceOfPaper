@@ -1,14 +1,18 @@
 #if DEBUG
 import AppKit
+import PaperKit
 
 /// Development aid: launched with `-snapshotPath /tmp/shot.png`, the app
 /// renders its main window to a PNG once loaded and quits. Lets the UI be
 /// checked from scripts without screen-recording permissions.
 ///
-/// Optional `-snapshotDelay <seconds>` (default 1.5) and
-/// `-snapshotAppearance dark|light`.
+/// Optional `-snapshotDelay <seconds>` (default 1.5),
+/// `-snapshotAppearance dark|light`, `-snapshotPage <page title>` and
+/// `-snapshotJump <heading>` (jumps to a heading as if clicked in the index).
 @MainActor
 enum DebugSnapshot {
+    static weak var store: LibraryStore?
+
     static var isEnabled: Bool {
         UserDefaults.standard.string(forKey: "snapshotPath") != nil
     }
@@ -29,9 +33,26 @@ enum DebugSnapshot {
         }
         let delay = defaults.object(forKey: "snapshotDelay") as? Double
             ?? Double(defaults.string(forKey: "snapshotDelay") ?? "") ?? 1.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay / 2) {
+            performScriptedActions()
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             capture(to: URL(filePath: path))
             NSApp.terminate(nil)
+        }
+    }
+
+    private static func performScriptedActions() {
+        guard let store else { return }
+        let defaults = UserDefaults.standard
+        if let title = defaults.string(forKey: "snapshotPage"),
+           let page = store.folders.flatMap(\.pages).first(where: { $0.displayTitle == title }) {
+            store.open(pageID: page.id)
+        }
+        if let text = defaults.string(forKey: "snapshotJump"),
+           let page = store.selectedPage,
+           let heading = IndexBuilder.headings(in: page.body).first(where: { $0.text == text }) {
+            store.jump(to: heading, in: page.id)
         }
     }
 

@@ -106,6 +106,12 @@ final class LibraryStore {
         folderSelectionDidChange()
     }
 
+    /// Re-reads the library, picking up changes made in the Finder.
+    func reload() {
+        flushPendingSaves()
+        load()
+    }
+
     func changeRoot(to url: URL) {
         flushPendingSaves()
         rootURL = url

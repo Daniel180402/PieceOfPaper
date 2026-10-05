@@ -15,6 +15,8 @@ struct PaperCommands: Commands {
             Divider()
             Button("Mostra nel Finder") { store.revealSelection() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
+            Button("Ricarica dal disco") { store.reload() }
+                .keyboardShortcut("r", modifiers: [.command, .option])
         }
 
         // The actions are implemented by PaperTextView and reach it through

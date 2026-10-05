@@ -44,6 +44,9 @@ struct ContentView: View {
         // The index header and the page header already show where you are.
         .toolbar(removing: .title)
         .onChange(of: store.selectedFolderID) { store.folderSelectionDidChange() }
+        #if DEBUG
+        .onAppear { DebugSnapshot.store = store }
+        #endif
         .onChange(of: store.selectedPageID) { store.pageSelectionDidChange() }
         .alert(
             "Si è verificato un problema",

@@ -55,6 +55,11 @@ struct MarkdownEditor: NSViewRepresentable {
             coordinator.lastJumpID = jump.id
             let onJumpHandled = onJumpHandled
             Task { @MainActor in
+                // A page opened from the index may not be on screen yet.
+                for _ in 0..<20 where textView.window == nil || scrollView.bounds.height == 0 {
+                    try? await Task.sleep(for: .milliseconds(25))
+                }
+                scrollView.layoutSubtreeIfNeeded()
                 textView.reveal(location: jump.location)
                 onJumpHandled()
             }
