@@ -4,7 +4,7 @@ App per macOS per prendere appunti di lavoro. Organizzi gli appunti in cartelle 
 
 ## Requisiti
 
-- macOS 14 o successivo
+- macOS 15 o successivo
 - Xcode 16 o successivo (Swift 6)
 
 ## Avvio rapido
