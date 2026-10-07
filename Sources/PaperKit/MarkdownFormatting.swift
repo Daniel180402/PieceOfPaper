@@ -113,10 +113,44 @@ public enum MarkdownFormatting {
             )
         }
 
+        // Selection somewhere inside a wrapped span: **wo|rd** removes the whole span.
+        if let span = enclosingSpan(marker: marker, in: text, containing: selection) {
+            let innerStart = span.location
+            let innerEnd = NSMaxRange(span) - 2 * m
+            let newStart = min(max(selection.location - m, innerStart), innerEnd)
+            let newEnd = min(max(end - m, innerStart), innerEnd)
+            return TextEdit(
+                range: span,
+                replacement: text.substring(with: NSRange(location: span.location + m, length: span.length - 2 * m)),
+                selection: NSRange(location: newStart, length: newEnd - newStart)
+            )
+        }
+
         return TextEdit(
             range: selection,
             replacement: marker + selected + marker,
             selection: NSRange(location: selection.location + m, length: selection.length)
         )
+    }
+
+    /// The `marker…marker` span (markers included) on the selection's line that
+    /// contains the selection. A bare caret must be strictly inside the span, so
+    /// that it can still start a new span right before or after an existing one.
+    public static func enclosingSpan(marker: String, in text: NSString, containing selection: NSRange) -> NSRange? {
+        let line = text.lineRange(for: NSRange(location: selection.location, length: 0))
+        guard NSMaxRange(selection) <= NSMaxRange(line) else { return nil }
+
+        let escaped = NSRegularExpression.escapedPattern(for: marker)
+        let pattern = marker.count == 1
+            ? "(?<!\(escaped))\(escaped)(?=[^\\s\(escaped)])(.+?)(?<=[^\\s\(escaped)])\(escaped)(?!\(escaped))"
+            : "\(escaped)(?=\\S)(.+?)(?<=\\S)\(escaped)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+
+        return regex.matches(in: text as String, range: line).map(\.range).first { span in
+            if selection.length == 0 {
+                return span.location < selection.location && selection.location < NSMaxRange(span)
+            }
+            return span.location <= selection.location && NSMaxRange(selection) <= NSMaxRange(span)
+        }
     }
 }

@@ -8,6 +8,7 @@ Organizzi gli appunti in **cartelle** (un progetto, un cliente, un'area di lavor
 
 - **Cartelle e indice**: la colonna centrale mostra l'indice della cartella. Le pagine si riordinano trascinandole, e un clic su un titolo dell'indice porta direttamente a quel punto della pagina.
 - **Editor Markdown**: scrivi in Markdown e lo vedi già formattato (titoli, grassetto, corsivo, barrato, evidenziato, codice, citazioni, link).
+- **Evidenziatore**: seleziona una frase e premi il pulsante con l'evidenziatore nella barra (o ⇧⌘H, o tasto destro → Evidenzia). Con il cursore dentro una frase evidenziata, lo stesso comando toglie l'evidenziazione. Nel file è salvata come `==frase==`, sintassi letta anche da Obsidian e Typora.
 - **Elenchi e checklist**: Invio continua l'elenco, Tab/⇧Tab cambiano il livello, un clic sulla casella `[ ]` segna l'attività come fatta.
 - **Ricerca** in tutte le cartelle, senza distinzione tra maiuscole e accenti.
 - **Salvataggio automatico** mentre scrivi.
@@ -66,7 +67,8 @@ Per lavorare in Xcode basta aprire `Package.swift`.
 | Elenco puntato / numerato | ⇧⌘7 / ⇧⌘9 |
 | Checklist / Segna come fatta | ⇧⌘L / ⇧⌘U |
 | Grassetto / Corsivo | ⌘B / ⌘I |
-| Barrato / Evidenziato / Codice | ⇧⌘X / ⇧⌘H / ⌥⌘C |
+| Evidenzia / togli evidenziazione | ⇧⌘H |
+| Barrato / Codice | ⇧⌘X / ⌥⌘C |
 | Data di oggi | ⇧⌘D |
 | Apri un link | ⌘-clic |
 

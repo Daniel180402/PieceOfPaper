@@ -69,6 +69,10 @@ enum WelcomeContent {
     - ⇧⌘L checklist · ⇧⌘U segna attività come fatta
     - ⇧⌘D inserisce la data di oggi
 
+    # Evidenziatore
+
+    Seleziona una frase e premi il pulsante con l'evidenziatore nella barra in alto, oppure ⇧⌘H o tasto destro → Evidenzia. ==Così appare una frase evidenziata.== Con il cursore dentro una frase evidenziata, lo stesso comando toglie l'evidenziazione.
+
     # Elenchi
 
     Premi Invio alla fine di un elenco per continuarlo, Invio su una voce vuota per terminarlo. Tab e ⇧Tab cambiano il livello della voce.

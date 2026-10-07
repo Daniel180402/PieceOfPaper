@@ -33,6 +33,16 @@ struct PageEditorView: View {
         .background(Color(nsColor: .textBackgroundColor))
         .navigationTitle(page.displayTitle)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    // Handled by the editor, which keeps the selection while the toolbar is clicked.
+                    NSApp.sendAction(#selector(PaperTextView.paperHighlight(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Evidenzia", systemImage: "highlighter")
+                }
+                .help("Evidenzia il testo selezionato, o togli l'evidenziazione (⇧⌘H)")
+            }
+
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     store.revealInFinder(pageID: page.id)

@@ -104,6 +104,62 @@ import Testing
         #expect(view.string == "titolo")
     }
 
+    // MARK: Highlighter
+
+    @Test func highlighterWrapsTheSelection() {
+        let view = textView("una frase importante", selection: NSRange(location: 4, length: 16))
+        view.paperHighlight(nil)
+        #expect(view.string == "una ==frase importante==")
+        #expect(view.selectedRange() == NSRange(location: 6, length: 16))
+    }
+
+    @Test func highlighterWithTheCaretInsideRemovesTheHighlight() {
+        let view = textView("una ==frase importante== qui", selection: NSRange(location: 10, length: 0))
+        #expect(view.selectionIsHighlighted)
+        view.paperHighlight(nil)
+        #expect(view.string == "una frase importante qui")
+        #expect(view.selectedRange() == NSRange(location: 8, length: 0))
+        #expect(!view.selectionIsHighlighted)
+    }
+
+    @Test func marksAreHiddenAwayFromTheSelection() throws {
+        let view = textView("==evidenziato==\naltra riga")
+        let storage = try #require(view.textStorage)
+        #expect(storage.attribute(.paperHidden, at: 0, effectiveRange: nil) != nil)
+        #expect(storage.attribute(.paperHidden, at: 13, effectiveRange: nil) != nil)
+        #expect(storage.attribute(.paperHidden, at: 5, effectiveRange: nil) == nil)
+        #expect(storage.attribute(.backgroundColor, at: 5, effectiveRange: nil) != nil)
+    }
+
+    @Test func marksAppearWhenTheCaretIsOnTheLine() throws {
+        let view = textView("==evidenziato==\naltra riga")
+        let storage = try #require(view.textStorage)
+        view.setSelectedRange(NSRange(location: 5, length: 0))
+        #expect(storage.attribute(.paperHidden, at: 0, effectiveRange: nil) == nil)
+        view.setSelectedRange(NSRange(location: 20, length: 0))
+        #expect(storage.attribute(.paperHidden, at: 0, effectiveRange: nil) != nil)
+    }
+
+    @Test func hiddenMarksTakeNoSpace() throws {
+        let view = textView("==evidenziato==\naltra riga")
+        let layoutManager = try #require(view.layoutManager)
+        let marker = layoutManager.glyphIndexForCharacter(at: 0)
+        let text = layoutManager.glyphIndexForCharacter(at: 2)
+        #expect(layoutManager.propertyForGlyph(at: marker).contains(.null))
+        #expect(!layoutManager.propertyForGlyph(at: text).contains(.null))
+    }
+
+    @Test func contextMenuOffersTheHighlighter() throws {
+        let view = textView("una frase", selection: NSRange(location: 4, length: 5))
+        let event = try #require(NSEvent.mouseEvent(
+            with: .rightMouseDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1
+        ))
+        #expect(view.menu(for: event)?.items.first?.title == "Evidenzia")
+        view.paperHighlight(nil)
+        #expect(view.menu(for: event)?.items.first?.title == "Rimuovi evidenziazione")
+    }
+
     // MARK: Styling
 
     @Test func headingsUseALargerFont() throws {

@@ -23,6 +23,7 @@ final class PaperTextView: NSTextView {
 
         let textView = PaperTextView(frame: .zero, textContainer: container)
         storage.delegate = textView.highlighter
+        layoutManager.delegate = textView.highlighter
         textView.configure()
         return textView
     }
@@ -127,6 +128,59 @@ final class PaperTextView: NSTextView {
         if replace(edit.range, with: edit.replacement) {
             setSelectedRange(edit.selection)
         }
+    }
+
+    // MARK: - Highlighter marks
+
+    override func setSelectedRanges(_ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting: Bool) {
+        super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelecting)
+        // Wait for the end of a mouse drag: revealing marks shifts the text.
+        guard !stillSelecting else { return }
+        if textStorage?.editedMask.isEmpty ?? true {
+            revealMarksAroundSelection()
+        } else {
+            // Selection updates during an edit: restyle once the edit is processed.
+            Task { @MainActor [weak self] in self?.revealMarksAroundSelection() }
+        }
+    }
+
+    /// Shows the `==` of highlights on the selected lines and hides them elsewhere.
+    private func revealMarksAroundSelection() {
+        guard let textStorage else { return }
+        let selection = selectedRange()
+        let previous = highlighter.revealedSelection
+        guard previous != selection else { return }
+        highlighter.revealedSelection = selection
+
+        let paragraph = nsString.paragraphRange(for: selection)
+        if let previous, NSMaxRange(previous) <= nsString.length,
+           nsString.paragraphRange(for: previous) == paragraph {
+            return
+        }
+        highlighter.restyleParagraphs(touching: [selection] + (previous.map { [$0] } ?? []), in: textStorage)
+        typingAttributes.removeValue(forKey: .paperHidden)
+    }
+
+    /// Whether the selection is inside a highlight (or is exactly its text).
+    var selectionIsHighlighted: Bool {
+        MarkdownFormatting.enclosingSpan(marker: "==", in: nsString, containing: selectedRange()) != nil
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        // The default menu is shared by all text views: add to a copy.
+        let menu = (super.menu(for: event)?.copy() as? NSMenu) ?? NSMenu()
+        let highlighted = selectionIsHighlighted
+        guard highlighted || selectedRange().length > 0 else { return menu }
+        let item = NSMenuItem(
+            title: highlighted ? "Rimuovi evidenziazione" : "Evidenzia",
+            action: #selector(paperHighlight(_:)),
+            keyEquivalent: ""
+        )
+        item.target = self
+        item.image = NSImage(systemSymbolName: "highlighter", accessibilityDescription: nil)
+        menu.insertItem(item, at: 0)
+        menu.insertItem(.separator(), at: 1)
+        return menu
     }
 
     // MARK: - Lists

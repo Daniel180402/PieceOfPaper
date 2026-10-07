@@ -4,14 +4,30 @@ import PaperKit
 extension NSAttributedString.Key {
     /// URL of a link in the editor, opened with ⌘-click.
     static let paperLink = NSAttributedString.Key("PaperLink")
+    /// Markup characters that are laid out as invisible, zero-width glyphs.
+    static let paperHidden = NSAttributedString.Key("PaperHidden")
 }
 
 /// Styles Markdown source while typing. The syntax stays visible (pages are
 /// plain Markdown files) but headings, emphasis, lists and tasks look like
 /// what they mean, with the markers themselves dimmed.
-final class MarkdownHighlighter: NSObject, NSTextStorageDelegate {
+///
+/// Highlighter marks (`==testo==`) go one step further: their `==` are hidden
+/// unless the selection is on that line, so highlights read like a real
+/// highlighter pen while staying editable.
+final class MarkdownHighlighter: NSObject, NSTextStorageDelegate, NSLayoutManagerDelegate {
     var fontSize: CGFloat = 15 {
         didSet { updateFonts() }
+    }
+
+    /// The current selection: markers on the lines it touches stay visible.
+    var revealedSelection: NSRange?
+
+    /// Highlighter-pen yellow, toned down in dark mode so white text stays readable.
+    let highlightColor = NSColor(name: "PaperHighlight") { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.72, green: 0.56, blue: 0.05, alpha: 0.55)
+            : NSColor(srgbRed: 1.0, green: 0.88, blue: 0.32, alpha: 0.75)
     }
 
     static let lineHeightMultiple: CGFloat = 1.22
@@ -82,6 +98,24 @@ final class MarkdownHighlighter: NSObject, NSTextStorageDelegate {
             let inFence = fenceRegex.numberOfMatches(in: textStorage.string, range: before) % 2 == 1
             highlight(textStorage, in: paragraph, startsInFence: inFence)
         }
+    }
+
+    /// Restyles the paragraphs touching `ranges`, e.g. to show or hide
+    /// highlighter marks when the selection moves to another line.
+    func restyleParagraphs(touching ranges: [NSRange], in storage: NSTextStorage) {
+        let string = storage.string as NSString
+        let paragraphs = Set(ranges.map { range in
+            let location = min(range.location, string.length)
+            let clamped = NSRange(location: location, length: min(range.length, string.length - location))
+            return string.paragraphRange(for: clamped)
+        })
+        storage.beginEditing()
+        for paragraph in paragraphs {
+            let before = NSRange(location: 0, length: paragraph.location)
+            let inFence = fenceRegex.numberOfMatches(in: storage.string, range: before) % 2 == 1
+            highlight(storage, in: paragraph, startsInFence: inFence)
+        }
+        storage.endEditing()
     }
 
     /// Restyles the whole text, e.g. after changing the font size.
@@ -244,10 +278,16 @@ final class MarkdownHighlighter: NSObject, NSTextStorageDelegate {
             dimMarkers(length: 2, of: range, in: storage)
         }
 
+        let revealed = isRevealed(lineRange)
         for match in highlightRegex.matches(in: line, range: fullLine) where outsideCode(match.range) {
             let range = NSRange(location: base + match.range.location, length: match.range.length)
-            storage.addAttribute(.backgroundColor, value: NSColor.systemYellow.withAlphaComponent(0.35), range: range)
-            dimMarkers(length: 2, of: range, in: storage)
+            storage.addAttribute(.backgroundColor, value: highlightColor, range: range)
+            if revealed {
+                dimMarkers(length: 2, of: range, in: storage)
+            } else {
+                storage.addAttribute(.paperHidden, value: true, range: NSRange(location: range.location, length: 2))
+                storage.addAttribute(.paperHidden, value: true, range: NSRange(location: NSMaxRange(range) - 2, length: 2))
+            }
         }
 
         for match in linkRegex.matches(in: line, range: fullLine) where outsideCode(match.range) {
@@ -264,7 +304,55 @@ final class MarkdownHighlighter: NSObject, NSTextStorageDelegate {
         }
     }
 
+    // MARK: - NSLayoutManagerDelegate
+
+    /// Lays out characters marked `.paperHidden` as null glyphs: not drawn, no width.
+    func layoutManager(
+        _ layoutManager: NSLayoutManager,
+        shouldGenerateGlyphs glyphs: UnsafePointer<CGGlyph>,
+        properties: UnsafePointer<NSLayoutManager.GlyphProperty>,
+        characterIndexes: UnsafePointer<Int>,
+        font: NSFont,
+        forGlyphRange glyphRange: NSRange
+    ) -> Int {
+        guard let storage = layoutManager.textStorage, glyphRange.length > 0 else { return 0 }
+        let first = characterIndexes[0]
+        let last = characterIndexes[glyphRange.length - 1]
+        var hasHidden = false
+        storage.enumerateAttribute(.paperHidden, in: NSRange(location: first, length: last - first + 1)) { value, _, stop in
+            if value != nil {
+                hasHidden = true
+                stop.pointee = true
+            }
+        }
+        guard hasHidden else { return 0 }
+
+        let adjusted = (0..<glyphRange.length).map { index -> NSLayoutManager.GlyphProperty in
+            let hidden = storage.attribute(.paperHidden, at: characterIndexes[index], effectiveRange: nil) != nil
+            return hidden ? .null : properties[index]
+        }
+        adjusted.withUnsafeBufferPointer { buffer in
+            layoutManager.setGlyphs(
+                glyphs,
+                properties: buffer.baseAddress!,
+                characterIndexes: characterIndexes,
+                font: font,
+                forGlyphRange: glyphRange
+            )
+        }
+        return glyphRange.length
+    }
+
     // MARK: - Helpers
+
+    private func isRevealed(_ lineRange: NSRange) -> Bool {
+        guard let selection = revealedSelection else { return false }
+        if selection.length > 0, NSIntersectionRange(selection, lineRange).length > 0 {
+            return true
+        }
+        // A caret at the very end of the line still belongs to it.
+        return lineRange.location <= selection.location && selection.location <= NSMaxRange(lineRange)
+    }
 
     private func headingPrefix(of line: String) -> (level: Int, prefixLength: Int)? {
         let leading = line.prefix(while: { $0 == " " }).count
